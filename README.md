@@ -1,129 +1,106 @@
 # Counter-va-Memo-factory-lar-closure-bilan-
-// 1. 15+ Mukammal Talabalar Bazasi
-const students = [
-  { id: 1, name: "Anvar", age: 20, major: "Frontend", score: 85, tags: ["active", "mentor"] },
-  { id: 2, name: "Diyora", age: 19, major: "Design", score: 92, tags: ["creative", "top"] },
-  { id: 3, name: "Bekzod", age: 22, major: "Backend", score: 74, tags: ["hardworking"] },
-  { id: 4, name: "Laylo", age: 21, major: "Frontend", score: 88, tags: ["active", "top"] },
-  { id: 5, name: "Sardor", age: 23, major: "Data Science", score: 65, tags: ["researcher"] },
-  { id: 6, name: "Madina", age: 18, major: "Design", score: 95, tags: ["top", "young"] },
-  { id: 7, name: "Jasur", age: 24, major: "Backend", score: 50, tags: ["borderline"] },
-  { id: 8, name: "Guli", age: 20, major: "Frontend", score: 79, tags: ["hardworking"] },
-  { id: 9, name: "Farruh", age: 22, major: "Data Science", score: 91, tags: ["top", "mentor"] },
-  { id: 10, name: "Zuhra", age: 19, major: "Mobile", score: 83, tags: ["active"] },
-  { id: 11, name: "Olim", age: 21, major: "Backend", score: 68, tags: ["researcher"] },
-  { id: 12, name: "Nodira", age: 20, major: "Design", score: 87, tags: ["creative"] },
-  { id: 13, name: "Shaxzod", age: 25, major: "Mobile", score: 45, tags: ["borderline"] },
-  { id: 14, name: "Malika", age: 22, major: "Frontend", score: 94, tags: ["top", "creative"] },
-  { id: 15, name: "Rustam", age: 23, major: "Backend", score: 81, tags: ["active"] }
-];
+class EventManager {
+  // Private/Class field holatlari
+  #status = "Faol";
 
-// ==========================================
-// MUKAMMAL MAP + FILTER ZANJIRLARI (Default qiymatlar funksiya parametrida)
-// ==========================================
+  constructor(elementIds = []) {
+    // Bo'sh massiv uchun xavfsiz boshlang'ich qiymat
+    this.elements = elementIds
+      .map(id => document.getElementById(id))
+      .filter(el => el !== null);
 
-// Zanjir 1: 80+ ballik Frontendchilarni saralash
-const getTopFrontenders = (list = []) => list
-  .filter(({ major, score }) => major === "Frontend" && score >= 80)
-  .map(({ name }) => name);
+    // 1. Class metodini bind yordamida kontekstga mahkamlash (Xavfsiz o'chirish uchun shart!)
+    this.boundHandleClick = this.handleClick.bind(this);
+  }
 
-// Zanjir 2: "top" talabalarning yoshini xavfsiz (immutable) oshirish
-const celebrateTopStudents = (list = []) => list
-  .filter(({ tags = [] }) => tags.includes("top"))
-  .map(student => ({ ...student, age: student.age + 1 }));
+  // ==========================================
+  // METOD 1: Oddiy Class Metodi (bind talab qiladi)
+  // ==========================================
+  handleClick(event) {
+    // Agarda bind qilinmasa, bu yerda 'this' undefined (strict mode) bo'lib qoladi
+    console.log(`[Metod] Kliklandi: ${event.target.id}. Menejer holati: ${this.#status}`);
+  }
 
-// Zanjir 3: 21 yoshdan katta va balli 70+ bo'lganlar ro'yxati
-const getSeniorPassList = (list = []) => list
-  .filter(({ age, score }) => age > 21 && score >= 70)
-  .map(({ id, name, major }) => ({ id, info: `${name} - ${major}` }));
+  // ==========================================
+  // METOD 2: Arrow Class Field (Avtomatik bind bo'ladi)
+  // ==========================================
+  handleHover = (event) => {
+    // Arrow funksiyalar o'z kontekstini yaratmaydi, shuning uchun 'this' har doim EventManager'ga teng
+    console.log(`[Arrow] Sichqoncha keldi: ${event.target.id}. Menejer holati: ${this.#status}`);
+  }
 
+  // ==========================================
+  // EVENT LISTENER'LARNI BOG'LASH
+  // ==========================================
+  init() {
+    this.elements.forEach(element => {
+      // Bound qilingan metodni va Arrow metodni xavfsiz bog'laymiz
+      element.addEventListener("click", this.boundHandleClick);
+      element.addEventListener("mouseenter", this.handleHover);
+    });
 
-// ==========================================
-// ADVANCED REDUCE METODLARI
-// ==========================================
+    // Asinxron taymerlarda 'this'ni yo'qotmaslik (Arrow va Bind misoli)
+    this.startStatusLog();
+  }
 
-// Reduce 1: Group By Major (To'liq xavfsiz immutable push - nusxa olish bilan)
-const groupByMajor = (list = []) => list.reduce((acc, student) => {
-  const { major } = student;
-  return {
-    ...acc,
-    [major]: [...(acc[major] ?? []), student] // Nullish coalescing va spread
-  };
-}, {});
+  // ==========================================
+  // SETTIMEOUT / SETINTERVAL ICHIDA THIS
+  // ==========================================
+  startStatusLog() {
+    // Muammo: Oddiy funksiya ichida 'this' Window bo'lib qoladi.
+    // Yechim 1: Arrow funksiya ishlatish (Konteksni tashqaridan oladi)
+    setTimeout(() => {
+      console.log(`[Timer Arrow] Tizim holati: ${this.#status}`);
+    }, 1000);
 
-// Reduce 2: Matematik statistika (Count, Total, Average birga)
-const getScoreStats = (list = []) => list.reduce((acc, { score }) => {
-  const count = acc.count + 1;
-  const total = acc.total + score;
-  return {
-    count,
-    total,
-    average: Number((total / count).toFixed(2))
-  };
-}, { count: 0, total: 0, average: 0 });
+    // Yechim 2: Eksplicit bind qilish
+    setInterval(function() {
+      console.log(`[Timer Bind] Tizim tekshiruvi: ${this.#status}`);
+    }.bind(this), 5000);
+  }
 
+  // ==========================================
+  // MANUAL HANDLER REMOVE (Xavfsiz olib tashlash)
+  // ==========================================
+  destroy() {
+    this.elements.forEach(element => {
+      // Diqqat: element.addEventListener("click", this.handleClick.bind(this)) deb yozilsa,
+      // removeEventListener uni o'chira olmaydi, chunki bind har safar YANGI funksiya qaytaradi.
+      // Shuning uchun constructor'da saqlangan 'this.boundHandleClick' moslamasini o'chiramiz:
+      element.removeEventListener("click", this.boundHandleClick);
+      
+      // Arrow field'lar esa o'zgaruvchi hisoblangani uchun to'g'ridan-to'g'ri o'chadi
+      element.removeEventListener("mouseenter", this.handleHover);
+    });
+    console.log("Menejer tozalindi va xotira bo'shatildi.");
+  }
+}
+// Kontekst uchun alohida tashqi obyektlar
+const loggerService = { prefix: "[LOG]" };
+const alertService = { prefix: "[ALERT]" };
 
-// ==========================================
-// SEARCH METODLARI (FIND, SOME, EVERY)
-// ==========================================
-const findCriticalStudent = (list = []) => list.find(({ score }) => score < 60) ?? null;
-const hasMentors = (list = []) => list.some(({ tags = [] }) => tags.includes("mentor"));
-const isEveryonePassing = (list = []) => list.every(({ score }) => score >= 40);
+// Universal xabar chiqarish funksiyasi
+function displayMessage(type, message) {
+  console.log(`${this.prefix} - Type: ${type}, Message: ${message}`);
+}
 
+// ---------------------------------------------------------
+// 1. CALL Bilan Chaqirish (Argumentlar ketma-ket beriladi)
+// ---------------------------------------------------------
+displayMessage.call(loggerService, "Info", "Tizim muvaffaqiyatli yuklandi.");
 
-// ==========================================
-// TUPLE-PATTERN MULTI-CRITERION SORT (Asl massivni buzmaydi - TO'LIQ IMMUTABLE)
-// ==========================================
-const sortStudentsAdvanced = (list = []) => [...list].sort((a, b) => {
-  // 1-mezon: ball bo'yicha kamayish, 2-mezon: yosh bo'yicha o'sish
-  const criteria = [b.score - a.score, a.age - a.age];
-  return criteria.find(value => value !== 0) ?? 0;
-});
-// 1. Counter Factory (Max/Min va qadam chegaralari to'liq tekshirilgan)
-const createCounter = ({ step = 1, min = -Infinity, max = Infinity } = {}) => {
-  let count = 0;
-  return {
-    increment: () => (count + step <= max ? (count += step) : count),
-    decrement: () => (count - step >= min ? (count -= step) : count),
-    getValue: () => count,
-    reset: () => (count = 0)
-  };
-};
+// ---------------------------------------------------------
+// 2. APPLY Bilan Chaqirish (Argumentlar massiv ko'rinishida beriladi)
+// ---------------------------------------------------------
+const alertArgs = ["Warning", "Xotira to'lib bormoqda!"];
+displayMessage.apply(alertService, alertArgs);
 
-// 2. To'liq Xavfsiz Memoize (Kontekst saqlangan holatda)
-const memoize = (funk) => {
-  const cache = new Map();
-  return function(...args) {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) return cache.get(key);
-    
-    const result = funk.apply(this, args); // 'this' yo'qolmasligi uchun apply
-    cache.set(key, result);
-    return result;
-  };
-};
+// ---------------------------------------------------------
+// 3. PARTIAL APPLICATION (Bind bilan argumentni muzlatish)
+// ---------------------------------------------------------
+// Birinchi argumentni ("Error") har doim qat'iy qilib biriktirib qo'yamiz
+const logError = displayMessage.bind(loggerService, "Error");
 
-// 3. Bir martalik ijro (Once)
-const once = (funk) => {
-  let isCalled = false;
-  let result;
-  return function(...args) {
-    if (!isCalled) {
-      result = funk.apply(this, args);
-      isCalled = true;
-    }
-    return result;
-  };
-};
-
-// 4. Haqiqiy Debounce (Taymer to'liq tozalanishi bilan)
-const debounce = (funk, ms) => {
-  let timerId = null;
-  return function(...args) {
-    const context = this;
-    if (timerId) clearTimeout(timerId);
-    timerId = setTimeout(() => {
-      funk.apply(context, args);
-    }, ms);
-  };
-};
+// Endi logError faqat bitta argument (message) qabul qiladi
+logError("Baza bilan aloqa uzildi!"); // Natija: [LOG] - Type: Error, Message: Baza bilan aloqa uzildi!
+logError("Avtorizatsiya xatosi.");    // Natija: [LOG] - Type: Error, Message: Avtorizatsiya xatosi.
